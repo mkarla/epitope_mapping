@@ -1,16 +1,15 @@
 name: capyflex-env
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
 dependencies:
-  - argparse
+  - python=3.9.7
   - tomlkit
   - tqdm
   - pandas
   - matplotlib
   - seaborn
   - numpy
-  - statistics
   - pip
   - pip:
     - FlowCal
