@@ -4,8 +4,8 @@ This repository contains the tools used for the analysis of flow cytometry data 
 
 ## How to run the analysis
 To install and run this project you need conda. Clone this repo to a location of your choice.
-1. Install the environment by running `conda env create -f environment.yml -n capyflex-env` from the main directory.
-2. Acitvate the environment by running `conda activate snakemake-env`
+1. Install the environment by running `conda env create -f environment.yml` from the main directory.
+2. Acitvate the environment by running `conda activate capyflex-env`
 
 ### NOTE
 This repo is currently being set up and is not complete.
