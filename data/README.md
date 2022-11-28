@@ -1,5 +1,5 @@
 # Data directory
-Place your data (`.fcs`) in this directory. Make one directory for each sample/analyte and place all raw data files in the respective folder. For the downstream analysis to work you should have the same number of files (i.e. the same residue positions) for each analyte.
+Place your data (`.fcs`) in this directory. Make one sub directory for each sample/analyte and place all raw data files in the respective folder. For the downstream analysis to work you should have the same number of files (i.e. the same residue positions) for each analyte.
 
 ## Example
 Say that you have two analytes, ab1 and ab2, for which you have tested 5 residue positions. You also have two positive and two negative controls. Your target is called Tar and you have tested the following positions:
