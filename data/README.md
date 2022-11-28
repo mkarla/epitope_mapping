@@ -8,6 +8,7 @@ Say that you have two analytes, ab1 and ab2, for which you have tested 5 residue
 - TAR332G
 - TAR343Y
 - TAR354S
+
 Make two directories, one named ab1 and one named ab2. In each directory you place all `.fcs` files beloning to that sample. In the end you should have the following file structure:
 ```
 data/
