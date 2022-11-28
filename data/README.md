@@ -1,4 +1,4 @@
-# Data driectory
+# Data directory
 Place your data (`.fcs`) in this directory. Make one directory for each sample/analyte and place all raw data files in the respective folder. For the downstream analysis to work you should have the same number of files (i.e. the same residue positions) for each analyte.
 
 ## Example
@@ -34,4 +34,4 @@ data/
 └── README.md
 ```
 
-Following this naming of the files will make everything look good. After running the analysis once each subfolder will also contain a `defaults.toml` file which contains your run settings. Unless you use the `-d` tag when rerunning it will reuse thsoe settings. 
+Following this naming of the files will make everything look good. After running the analysis once for an analyte that subfolder will also contain a `defaults.toml` file which contains your run settings. Unless you use the `-d` tag when rerunning it will reuse thsoe settings. 
