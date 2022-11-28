@@ -34,6 +34,7 @@ def argument_check(args):
     if not args.Analyte:
         print('No analyte given, use -a to define analyte')
         sys.exit(1)
+
 def make_defaults(args, files, input_path, analyte):
     print('')
     savename = input_path + analyte + '/' + 'defaults.toml'
@@ -138,14 +139,14 @@ def make_output(input_path, analyte):
         input_path = input_path
     else:
         input_path = input_path + '/' 
-    output_path = input_path + 'output/'
+    output_path = 'results/'
     fc_plot_path = output_path + 'fc_plots/' + analyte + '/'
     if not os.path.exists(fc_plot_path):
         os.makedirs(fc_plot_path)
     sup_fc_plot_path = output_path + 'supplementary_fc_plots/' + analyte + '/'
     if not os.path.exists(sup_fc_plot_path):
         os.makedirs(sup_fc_plot_path)
-    results_path = output_path + 'results/'
+    results_path = output_path + 'csv/'
     if not os.path.exists(results_path):
         os.makedirs(results_path)
     return(fc_plot_path, sup_fc_plot_path, results_path)
@@ -550,7 +551,9 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
 def analysis_iterator(input_dir, analyte, files, center, channel1, channel2, high_gate, adapt_ellipse):
     fc_plot_path, sup_path, results_path = make_output(input_dir, analyte)
     results = results_format(channel1, channel2)
-    for i in tqdm(range(len(files))):
+    pbar = tqdm(range(len(files)))
+    for i in pbar:
+        pbar.set_description("Processing %s" % files[i].split('/')[-1])
         sleep(0.1)
         file = files[i]
         results = plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellipse, fc_plot_path, sup_path)
@@ -598,7 +601,7 @@ if __name__ == '__main__':
                                      epilog=epilog,
                                      formatter_class=RawTextHelpFormatter)
     parser.add_argument("-d", "--Defaults", help="Define new defaults", action='store_true')
-    parser.add_argument("-i", "--Input", help="Input directory")
+    parser.add_argument("-i", "--Input", help="Input directory", nargs='?', const="data/", type=str, default="data/")
     parser.add_argument("-a", "--Analyte", help="Analyte or antibody")
     parser.add_argument("-ch1", "--Channel1", help="Fluorescent channel for expression")
     parser.add_argument("-ch2", "--Channel2", help="Fluorescent channel for binding")
