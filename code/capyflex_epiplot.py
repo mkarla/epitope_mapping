@@ -279,7 +279,7 @@ def main(args):
 if __name__ == '__main__':
     prog = "Epitope mapping plotting program"
     description = """Version 0.1, author Maximilian Karlander \n
-    This script is designed fto take the output files of multiple analytes from capyflex_epitope and reveal their epitopes.
+    This script is designed to take the output files of multiple analytes from capyflex_epitope and reveal their epitopes.
     """
     epilog = "I did good, didn't I?"
     parser = argparse.ArgumentParser(prog=prog, 
@@ -290,6 +290,7 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--Input", help="Input directory")
     parser.add_argument("-p", "--Positive", help="Name of positive control")
     parser.add_argument("-n", "--Negative", help="Name of negative control")
+    parser.add_argument("-s", "--Struture", help="Name of negative control", action='store_true')
 #    parser.add_argument("-hi", "--HighGate", help="Gate to remove non expressing population")
 #    parser.add_argument("-dp", "--Double", help="!Experimental! Use this to gate out the lower population of two", action='store_true')
     args = parser.parse_args()  
