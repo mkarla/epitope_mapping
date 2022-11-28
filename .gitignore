@@ -1,13 +1,14 @@
 #Ignore these directories:
-data/
+#data/*.fcs
 intermediate/
 results/
 
 #Data exceptions:
-!data/*.toml
+#!data/*.toml
 
 #Ignore temporary files:
 *.tmp
+*.fcs
 
 #ignore other files:
 .DS_Store
