@@ -1,0 +1,9 @@
+# Defaults file for epitope mapping
+
+center_x = 6.0
+center_y = 6.15
+channel1 = "FL1-A"
+channel2 = "FL3-A"
+high_gate = "1400"
+adapt_ellipse = false
+channels = ["FSC-H", "FSC-A", "SSC-H", "SSC-A", "FL1-H", "FL1-A", "FL2-H", "FL2-A", "FL3-H", "FL3-A", "FL4-H", "FL4-A", "FL5-H", "FL5-A", "FL6-H", "FL6-A", "FL7-H", "FL7-A", "FL8-H", "FL8-A", "FL9-H", "FL9-A", "FSC-Width", "Time"]
