@@ -24,10 +24,11 @@ from tqdm import tqdm
 np.seterr(all="ignore")
 
 """
+- dela upp för snakemake
 - generalisera adaptive ellipse?
 """
 
-def argument_check(args):   
+def argument_check(args):
     if not args.Input:
         print('No input path given, use -i to define input path')
         sys.exit(1)
@@ -134,11 +135,7 @@ def make_filelist(input_dir, analyte):
         sys.exit(1)
     return(files)
 
-def make_output(input_path, analyte):
-    if input_path[-1] == '/':
-        input_path = input_path
-    else:
-        input_path = input_path + '/' 
+def make_output(analyte):
     output_path = 'results/'
     fc_plot_path = output_path + 'fc_plots/' + analyte + '/'
     if not os.path.exists(fc_plot_path):
@@ -549,7 +546,7 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
     return(results)
 
 def analysis_iterator(input_dir, analyte, files, center, channel1, channel2, high_gate, adapt_ellipse):
-    fc_plot_path, sup_path, results_path = make_output(input_dir, analyte)
+    fc_plot_path, sup_path, results_path = make_output(analyte)
     results = results_format(channel1, channel2)
     pbar = tqdm(range(len(files)))
     for i in pbar:
