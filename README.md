@@ -14,7 +14,7 @@ To install and run this project you need conda. Clone this repo to a location of
 
 ### Plotting of epitopes
 1. Run `code/capyflex_epiplot.py -h` to see options for the plotting script.
-2. From the main directory of your project run `code/capyflex_epiplot.py -p <positive-control> -n <negative-comntrol>` with the same control names as in your `.fcs` files. If you are reproducing the analysis for the problished project they will be `-p RBD -n FMO`.
+2. From the main directory of your project run `code/capyflex_epiplot.py -p <positive-control> -n <negative-comntrol>` with the same control names as in your `.fcs` files. If you are reproducing the analysis for the published project they will be `-p RBD -n FMO`.
 
 ### Finding the results
 - Detailed flow cytometry plots for each sample in `results/fc_plots/`.
