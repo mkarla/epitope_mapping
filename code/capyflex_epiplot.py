@@ -51,7 +51,7 @@ def make_filelist(input_dir):
         input_dir = input_dir
     else:
         input_dir = input_dir + '/' 
-    filepath = input_dir  + 'output/results/'
+    filepath = input_dir
     if not os.path.exists(filepath):
         print("The folder doesn't exist")
         sys.exit(1)
@@ -61,20 +61,19 @@ def make_filelist(input_dir):
         print('No results files in input folder.')
         sys.exit(1)
     return(files)
+def path_check(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-def make_output(input_path):
-    if input_path[-1] == '/':
-        input_path = input_path
-    else:
-        input_path = input_path + '/' 
-    output_path = input_path + 'output/'
+def make_output():
+    output_path = 'results/'
     epitope_plot_path = output_path + 'epitope_plots/'
-    if not os.path.exists(epitope_plot_path):
-        os.makedirs(epitope_plot_path)
+    path_check(epitope_plot_path)
     pymol_path = output_path + 'pymol/'
-    if not os.path.exists(pymol_path):
-        os.makedirs(pymol_path)
-    return(epitope_plot_path, pymol_path)
+    path_check(pymol_path)
+    plot_value_path = output_path + 'plot_values/'
+    path_check(plot_value_path)
+    return(epitope_plot_path, pymol_path, plot_value_path)
 
 def NormalizeData(current):
     binding_control = current.loc[current["file"] == "RBD"]["value"].mean()
@@ -94,7 +93,7 @@ def data_collector(file, plot_parameter):
 def remove_replicates(df, positive):
     std_pos = df.loc[df["file"] == positive]["normalized"].values.tolist()
     std_pos = statistics.stdev(std_pos)
-    df = df.groupby(['file']).mean()
+    df = df.groupby(['file']).mean('value', 'normalized')
     return(df, std_pos)
 
 def order(df, order_param):
@@ -124,6 +123,7 @@ def plot_colors(df, value, vmin, vmax, structural):
     return(df, rgba_colors)
 
 def log_plot(df, plot_paramater, analyte, positive, order_param, barplot_path):
+
     df, std_pos = remove_replicates(df, positive)
     df["log change"]=np.log10(df["normalized"])
     plot_order = order(df, order_param)
@@ -221,7 +221,7 @@ def pymol_scripter(path, summary, analyte, plot_parameter, increased, decreased,
         for l in lines:
             f.write(l + "\n")
 
-def analysis_iterator(files, plot_parameter, barplot_path, pymol_path):
+def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_value_path):
     positive = 'RBD'
     order_param = 'file'
 #    plot_order = 'value'
@@ -237,6 +237,7 @@ def analysis_iterator(files, plot_parameter, barplot_path, pymol_path):
         sleep(0.1)
         analyte = file.split('/')[-1].split('.')[0]
         df = data_collector(files[i], plot_parameter)
+        df.to_csv(plot_value_path + analyte + '.csv')
         df = log_plot(df, plot_parameter, analyte, positive, order_param, barplot_path)
         df = heatmap_transform(df, analyte)
         if 'df_heatmap' not in locals():
@@ -247,14 +248,13 @@ def analysis_iterator(files, plot_parameter, barplot_path, pymol_path):
     return(df_heatmap)
 
 def plot_heatmap(df, heatmap_path):
-    target = heatmap_path.split('/')[-4]
+    #target = heatmap_path.split('/')[-4]
     cmap = sns.cm.crest_r
     cmap = 'Greens_r'
     fig, ax = plt.subplots(1,1, figsize=(20,5))
     ax = sns.heatmap(df, cmap=cmap, linewidth=.5, vmin=0.8, vmax=2.8)
     plt.tight_layout()
-    df.to_csv('test.csv')
-    plt.savefig(heatmap_path + target + '_epitopes.pdf', dpi=300)       
+    plt.savefig(heatmap_path + 'epitope_heatmap.pdf', dpi=300)       
 
 def main(args):
     input_dir = args.Input
@@ -263,13 +263,13 @@ def main(args):
     files = make_filelist(input_dir)
     
     plot_parameter = 'gated mean FL3-A div mean FL1-A one-by-one'
-    epitope_plot_path, pymol_path = make_output(input_dir)
+    epitope_plot_path, pymol_path, plot_value_path = make_output()
     
     print('')
     print('____________________________')
     print('Running')
     
-    df_heatmap = analysis_iterator(files, plot_parameter, epitope_plot_path, pymol_path)
+    df_heatmap = analysis_iterator(files, plot_parameter, epitope_plot_path, pymol_path, plot_value_path)
     
     print('')
     print('Making heatmap of all analytes')
@@ -287,7 +287,7 @@ if __name__ == '__main__':
                                      epilog=epilog,
                                      formatter_class=RawTextHelpFormatter)
 #    parser.add_argument("-d", "--Defaults", help="Define new defaults", action='store_true')
-    parser.add_argument("-i", "--Input", help="Input directory")
+    parser.add_argument("-i", "--Input", help="Input directory", nargs='?', const="results/csv/", type=str, default="results/csv/")
     parser.add_argument("-p", "--Positive", help="Name of positive control")
     parser.add_argument("-n", "--Negative", help="Name of negative control")
     parser.add_argument("-s", "--Struture", help="Name of negative control", action='store_true')
