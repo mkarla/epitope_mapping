@@ -12,3 +12,7 @@ results/
 
 #ignore other files:
 .DS_Store
+data/.Rhistory
+pymol.toml
+supplementary.html
+supplementary.rmd
