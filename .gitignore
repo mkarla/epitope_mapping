@@ -2,6 +2,7 @@
 #data/*.fcs
 intermediate/
 results/
+manuscript/
 
 #Data exceptions:
 #!data/*.toml
