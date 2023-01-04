@@ -25,25 +25,14 @@ import numpy as np
 np.seterr(all="ignore")
 
 """
-- pymol
-    - pymol file located in pymol folder
-    - show features
 - inputparametrar
-    - plot parameter
     - positive
     - negative
-    - plot order
     - pymol on/off
-    - pymol limits
-    - structural
-    - rotation
-    - static areas + color
-- defaults
-
-
-
-- mappstruktur
-- Heatmap
+    -!!! structural
+    -!!! rotation
+    - framework
+    - hide
 """
 
 def make_filelist(input_dir):
@@ -61,6 +50,7 @@ def make_filelist(input_dir):
         print('No results files in input folder.')
         sys.exit(1)
     return(files)
+
 def path_check(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -83,7 +73,6 @@ def NormalizeData(current):
 
 def data_collector(file, plot_parameter):
     df = pd.read_csv(file)
-#    df = df[df["gated events"] > 100]
     df = pd.melt(df, id_vars=['file'], value_vars=df.columns[3:].values.tolist())
     df["file"] = [x.split("_")[0] for x in df["file"]]
     df = df.loc[df["variable"] == plot_parameter]
@@ -160,71 +149,72 @@ def position_extractor(position):
             pass
     return(pos)
            
-def pymol_scripter(path, summary, analyte, plot_parameter, increased, decreased, structural):
-    no_change_color = summary.loc[summary["file"] == "RBD"]["rgba_colors"].values.tolist()[0]
-    hex_col = matplotlib.colors.to_hex(no_change_color)
-    hex_col = "0x" + hex_col[1:]
+def pymol_scripter(analyte, path, df, neg, struct, rotation):
+    framework = ['rbd']
+    hide = ['heavy', 'light']
     
-    #structural = summary.loc[summary['file'] == "RBD355"]
-    filt_sum = summary.loc[(summary['file'] != "FMO") & (summary['file'] != "RBD355")]
-    high_four = filt_sum.nlargest(increased, "change")
-    low_four = filt_sum.nsmallest(decreased, "change")   
-    extreme_sum = pd.concat([high_four, low_four, structural], axis=0)
+    #struct = ['RBD355R']
     
-    lines = [
-    '#!/usr/bin/env python3',
-    '# -*- coding: utf-8 -*',
-    'from pymol import cmd',
-    'cmd.delete("all")',
-    'cmd.load("/users/maximiliankarlander/Dropbox/Jobb/Projects/epitope_mapping/pymol/6yla_annot.pse")',
-    'cmd.bg_color(color="white")',
-    'cmd.refresh()',
-    f'cmd.color("{hex_col}", "rbd")',
-    'cmd.color("0xFFFFFF", "rbd")',
-    'cmd.hide("everything", "heavy")',
-    'cmd.hide("everything", "light")',
-    'cmd.rotate("y", "-110")',
-    'cmd.color("0xa3a3a3", "resi 438-506")',
-    'cmd.color("0x835A00", "resi 355")'
-         ]
+    #locate pymol file
+    pdb_file = glob.glob("data/pymol/" + '*.pdb')
+    pse_file = glob.glob("data/pymol/" + '*.pse')
+    if len(pse_file)==1:
+        file = os.path.abspath(pse_file[0])
+    elif len(pdb_file)==1:
+        file = os.path.abspath(pdb_file[0])
+    else:
+        print('Too many pdb or pse files were provided.')
+        sys.exit(1)
+    model = file.split("/")[-1]
 
-    if analyte == "CR3022":
-        lines.append('cmd.show("cartoon", "L1")')
-        lines.append('cmd.show("cartoon", "L2")')
-        lines.append('cmd.show("cartoon", "L3")')
-        lines.append('cmd.show("cartoon", "H1")')
-        lines.append('cmd.show("cartoon", "H2")')
-        lines.append('cmd.show("cartoon", "H3")')
-        lines.append('cmd.color("0x8aac88", "cr3022_epitope_")')
+    #initiate lines
+    lines = ['#!/usr/bin/env python3',
+            '# -*- coding: utf-8 -*',
+            'from pymol import cmd',
+            'cmd.delete("all")',
+            f'cmd.load("{file}")',
+            'cmd.bg_color(color="white")',
+            'cmd.refresh()']
 
-    for pos, col in zip(extreme_sum["file"], extreme_sum["rgba_colors"]):  
-            if position_extractor(pos) == 3:
-                if pos in structural:
-                    pos = position_extractor(pos)
-#                    lines.append(f'cmd.color("0x549d47", "resi {pos}")') 
-                    
-                else:
-                    pos = position_extractor(pos)
-                    hex_col = matplotlib.colors.to_hex(col)
-                    hex_col = "0x" + hex_col[1:]
-                    lines.append(f'cmd.color("{hex_col}", "resi {pos}")')
+    #define frameworks and regions to hide
+    for region in framework:
+        lines.append(f'cmd.color("0xFFFFFF", "{region}")')
+    for region in hide:
+        lines.append(f'cmd.hide("everything", "{region}")')
+    for residue in struct:
+        residue = position_extractor(residue)
+        lines.append(f'cmd.color("0x835A00", "resi {residue}")')
     
+    #color top 3 residues 
+    for residue in struct:
+        df = df.loc[df.index!=residue]
+    df = df.loc[df.index!=neg]
+    df_top =df.nsmallest(3, "log change")
+    for pos, col in zip(df_top.index, df_top["rgba_colors"]):   
+        pos = position_extractor(pos)
+        hex_col = matplotlib.colors.to_hex(col)
+        hex_col = "0x" + hex_col[1:]
+        lines.append(f'cmd.color("{hex_col}", "resi {pos}")')   
+
+    #rotation and save
+    if rotation:
+        rotation_init = f'{rotation}'
+        lines.append(f'cmd.rotate("y", "{rotation_init}")')
     lines.append('cmd.refresh()')
     lines.append(f'cmd.png("{analyte}_structure_1.png", "30cm", "30cm", dpi=300, ray=1)')
     lines.append('cmd.turn("y", 180)')
     lines.append('cmd.refresh()')
     lines.append(f'cmd.png("{analyte}_structure_2.png", "30cm", "30cm", dpi=300, ray=1)')
-        
-                     
-                     
-    with open(path + analyte + "_6yla_" + plot_parameter + '_top' + str(increased) + '_bottom' + str(decreased) + '.py', 'w') as f:
+
+    with open(f'{path}{analyte}_{model}.py', 'w') as f:
         for l in lines:
             f.write(l + "\n")
 
-def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_value_path):
-    positive = 'RBD'
+
+def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_value_path, args):
+    positive = args.Positive
+    negative = args.Negative
     order_param = 'file'
-#    plot_order = 'value'
     print('Determining the epitope for the following analytes:')
     files.sort()
     for file in files:
@@ -239,6 +229,7 @@ def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_valu
         df = data_collector(files[i], plot_parameter)
         df.to_csv(plot_value_path + analyte + '.csv')
         df = log_plot(df, plot_parameter, analyte, positive, order_param, barplot_path)
+        pymol_scripter(analyte, pymol_path, df, negative, args.Structural, args.Rotation)
         df = heatmap_transform(df, analyte)
         if 'df_heatmap' not in locals():
             df_heatmap = df
@@ -258,21 +249,16 @@ def plot_heatmap(df, heatmap_path):
 
 def main(args):
     input_dir = args.Input
-    print('')
-    print('Input directory:', input_dir)
+    print(f'\nInput directory: {input_dir}')
     files = make_filelist(input_dir)
     
     plot_parameter = 'gated mean FL3-A div mean FL1-A one-by-one'
     epitope_plot_path, pymol_path, plot_value_path = make_output()
     
-    print('')
-    print('____________________________')
-    print('Running')
+    print('\n____________________________\nRunning')
     
-    df_heatmap = analysis_iterator(files, plot_parameter, epitope_plot_path, pymol_path, plot_value_path)
-    
-    print('')
-    print('Making heatmap of all analytes')
+    df_heatmap = analysis_iterator(files, plot_parameter, epitope_plot_path, pymol_path, plot_value_path, args)
+    print('\nMaking heatmap of all analytes')
     plot_heatmap(df_heatmap, epitope_plot_path)
     
     
@@ -290,8 +276,8 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--Input", help="Input directory", nargs='?', const="results/csv/", type=str, default="results/csv/")
     parser.add_argument("-p", "--Positive", help="Name of positive control")
     parser.add_argument("-n", "--Negative", help="Name of negative control")
-    parser.add_argument("-s", "--Struture", help="Name of negative control", action='store_true')
-#    parser.add_argument("-hi", "--HighGate", help="Gate to remove non expressing population")
-#    parser.add_argument("-dp", "--Double", help="!Experimental! Use this to gate out the lower population of two", action='store_true')
+    parser.add_argument("-py", "--Pymol", help="Make pymol script", action='store_true')
+    parser.add_argument("-r", "--Rotation", help="Pymol initial rotation on y axis")
+    parser.add_argument("-s", "--Structural", nargs='+', help="Structural positions")
     args = parser.parse_args()  
     main(args)
