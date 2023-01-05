@@ -14,9 +14,10 @@ The initial analysis is performed indepently for each analyte. This analysis rea
 6. Rerun step 5 for all samples.
 
 ### Plotting of epitopes
-This part of the analysis takes the `.csv` files from the previous analysis steps, normalize the data, and make both individual plots for each analyte and a combined heatmap. Furhtermore there are options to make a PyMol script to show the top 3 disrupting positions in a pdb structure.
+This part of the analysis takes the `.csv` files from the previous analysis steps, normalize the data, and make both individual plots for each analyte and a combined heatmap. Furhtermore there are options to make a PyMol script to show the top three disrupting positions in a pdb structure.
 1. Run `code/capyflex_epiplot.py -h` to see options for the plotting script.
 2. From the main directory of your project run `code/capyflex_epiplot.py -p <positive-control> -n <negative-comntrol>` with the same control names as in your `.fcs` files. If you are reproducing the analysis for the published project they will be `-p RBD -n FMO`.
+3. To write PyMol scripts add the `-py`command. This will furhther require the `-f <framework-name>` command where the name of the framework in the PyMol file used. The PyMol can either be `.pdb` or `.pse` with the later having priority. Further options are `-r <initial-rotation>`, `-s <structural-positions>`, and `-hi <regions-to-hide>`. When running the PyMol script it will color the framework region white, structural positions brown, and the top three disrupting positions colored red with intensity correlating to its binding value. FInally two `.png` files be saved, the second being rotated 180° on the y axis.
 
 ### Finding the results
 - Detailed flow cytometry plots for each sample in `results/fc_plots/`.
