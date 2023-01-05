@@ -8,12 +8,10 @@ Created on Wed Nov 16 11:02:56 2022
 
 import argparse
 from argparse import RawTextHelpFormatter
-import tomlkit
 import os
 import glob
 import sys
 import math
-from time import sleep
 from tqdm import tqdm
 import pandas as pd
 import statistics
@@ -23,17 +21,6 @@ from matplotlib import cm
 import seaborn as sns
 import numpy as np
 np.seterr(all="ignore")
-
-"""
-- inputparametrar
-    - positive
-    - negative
-    - pymol on/off
-    -!!! structural
-    -!!! rotation
-    - framework
-    - hide
-"""
 
 def make_filelist(input_dir):
     if input_dir[-1] == '/':
@@ -51,6 +38,17 @@ def make_filelist(input_dir):
         sys.exit(1)
     return(files)
 
+def pymol_check(args):
+    if args.Pymol:
+        print('Also making PyMol scripts for each analyte')
+        if not args.Framework:
+            print('      - No framework provided. Please provide the name of the framework (-f) in model.')
+            sys.exit(1)
+        if args.Structural:
+            print('      - The following residues will be considered structurally important and not considered for the epitope:')
+            for residue in args.Structural:
+                print(f'         - {residue}')
+
 def path_check(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -65,18 +63,18 @@ def make_output():
     path_check(plot_value_path)
     return(epitope_plot_path, pymol_path, plot_value_path)
 
-def NormalizeData(current):
-    binding_control = current.loc[current["file"] == "RBD"]["value"].mean()
-    no_binding_control = current.loc[current["file"] == "FMO"]["value"].mean()
+def NormalizeData(current, positive, negative):
+    binding_control = current.loc[current["file"] == positive]["value"].mean()
+    no_binding_control = current.loc[current["file"] == negative]["value"].mean()
     nomalized_data = [(x-no_binding_control)/(binding_control-no_binding_control)*100 for x in current["value"]]
     return(nomalized_data)
 
-def data_collector(file, plot_parameter):
+def data_collector(file, plot_parameter, positive, negative):
     df = pd.read_csv(file)
     df = pd.melt(df, id_vars=['file'], value_vars=df.columns[3:].values.tolist())
     df["file"] = [x.split("_")[0] for x in df["file"]]
     df = df.loc[df["variable"] == plot_parameter]
-    df['normalized'] = NormalizeData(df)
+    df['normalized'] = NormalizeData(df, positive, negative)
     return(df)
 
 def remove_replicates(df, positive):
@@ -112,7 +110,6 @@ def plot_colors(df, value, vmin, vmax, structural):
     return(df, rgba_colors)
 
 def log_plot(df, plot_paramater, analyte, positive, order_param, barplot_path):
-
     df, std_pos = remove_replicates(df, positive)
     df["log change"]=np.log10(df["normalized"])
     plot_order = order(df, order_param)
@@ -149,13 +146,8 @@ def position_extractor(position):
             pass
     return(pos)
            
-def pymol_scripter(analyte, path, df, neg, struct, rotation):
-    framework = ['rbd']
-    hide = ['heavy', 'light']
-    
-    #struct = ['RBD355R']
-    
-    #locate pymol file
+def pymol_scripter(analyte, path, df, neg, struct, rotation, framework, hide):
+    #locate pdb and pse files. pse file have priority over pdb.
     pdb_file = glob.glob("data/pymol/" + '*.pdb')
     pse_file = glob.glob("data/pymol/" + '*.pse')
     if len(pse_file)==1:
@@ -167,7 +159,7 @@ def pymol_scripter(analyte, path, df, neg, struct, rotation):
         sys.exit(1)
     model = file.split("/")[-1]
 
-    #initiate lines
+    #initiate lines for pymol script
     lines = ['#!/usr/bin/env python3',
             '# -*- coding: utf-8 -*',
             'from pymol import cmd',
@@ -179,15 +171,16 @@ def pymol_scripter(analyte, path, df, neg, struct, rotation):
     #define frameworks and regions to hide
     for region in framework:
         lines.append(f'cmd.color("0xFFFFFF", "{region}")')
-    for region in hide:
-        lines.append(f'cmd.hide("everything", "{region}")')
-    for residue in struct:
-        residue = position_extractor(residue)
-        lines.append(f'cmd.color("0x835A00", "resi {residue}")')
+    if hide:
+        for region in hide:
+            lines.append(f'cmd.hide("everything", "{region}")')
+    if struct:
+        for residue in struct:
+            df = df.loc[df.index!=residue]
+            residue = position_extractor(residue)
+            lines.append(f'cmd.color("0x835A00", "resi {residue}")')
     
-    #color top 3 residues 
-    for residue in struct:
-        df = df.loc[df.index!=residue]
+    #color top 3 residues according to binding change
     df = df.loc[df.index!=neg]
     df_top =df.nsmallest(3, "log change")
     for pos, col in zip(df_top.index, df_top["rgba_colors"]):   
@@ -210,7 +203,6 @@ def pymol_scripter(analyte, path, df, neg, struct, rotation):
         for l in lines:
             f.write(l + "\n")
 
-
 def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_value_path, args):
     positive = args.Positive
     negative = args.Negative
@@ -219,17 +211,16 @@ def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_valu
     files.sort()
     for file in files:
         print(file.split('/')[-1].split('.')[0])
-    print('')
-    print('Making individual plots for each analyte')
+    print('\nMaking individual plots for each analyte')
+    pymol_check(args)
     for i in tqdm(range(len(files))):
-        #ADD PYMOL
         file = files[i]
-        sleep(0.1)
         analyte = file.split('/')[-1].split('.')[0]
-        df = data_collector(files[i], plot_parameter)
+        df = data_collector(files[i], plot_parameter, positive, negative)
         df.to_csv(plot_value_path + analyte + '.csv')
         df = log_plot(df, plot_parameter, analyte, positive, order_param, barplot_path)
-        pymol_scripter(analyte, pymol_path, df, negative, args.Structural, args.Rotation)
+        if args.Pymol:
+            pymol_scripter(analyte, pymol_path, df, negative, args.Structural, args.Rotation, args.Framework, args.Hide)
         df = heatmap_transform(df, analyte)
         if 'df_heatmap' not in locals():
             df_heatmap = df
@@ -260,8 +251,7 @@ def main(args):
     df_heatmap = analysis_iterator(files, plot_parameter, epitope_plot_path, pymol_path, plot_value_path, args)
     print('\nMaking heatmap of all analytes')
     plot_heatmap(df_heatmap, epitope_plot_path)
-    
-    
+       
 if __name__ == '__main__':
     prog = "Epitope mapping plotting program"
     description = """Version 0.1, author Maximilian Karlander \n
@@ -272,11 +262,12 @@ if __name__ == '__main__':
                                      description=description, 
                                      epilog=epilog,
                                      formatter_class=RawTextHelpFormatter)
-#    parser.add_argument("-d", "--Defaults", help="Define new defaults", action='store_true')
     parser.add_argument("-i", "--Input", help="Input directory", nargs='?', const="results/csv/", type=str, default="results/csv/")
     parser.add_argument("-p", "--Positive", help="Name of positive control")
     parser.add_argument("-n", "--Negative", help="Name of negative control")
     parser.add_argument("-py", "--Pymol", help="Make pymol script", action='store_true')
+    parser.add_argument("-f", "--Framework", nargs='+', help="Name of framework region(s) for pymol script")
+    parser.add_argument("-hi", "--Hide", nargs='+', help="Regions to hide for pymol script")
     parser.add_argument("-r", "--Rotation", help="Pymol initial rotation on y axis")
     parser.add_argument("-s", "--Structural", nargs='+', help="Structural positions")
     args = parser.parse_args()  
