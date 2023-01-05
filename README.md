@@ -24,3 +24,7 @@ To install and run this project you need conda. Clone this repo to a location of
 
 ### NOTE
 This repo is currently being set up and is not complete.
+
+### Stuff of importance
+Following plot command:
+`python3 code/capyflex_epiplot.py -n FMO -p RBD -py -f rbd -r -110 -s RBD355R -hi heavy light`
