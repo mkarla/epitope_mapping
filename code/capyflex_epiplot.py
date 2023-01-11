@@ -22,13 +22,6 @@ import seaborn as sns
 import numpy as np
 np.seterr(all="ignore")
 
-
-"""
-- options for number of top positions
-    - write all positions commented?
-    - add commented value for each position?
-"""
-
 def make_filelist(input_dir, args):
     if input_dir[-1] == '/':
         input_dir = input_dir
