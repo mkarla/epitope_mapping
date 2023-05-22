@@ -42,9 +42,6 @@ Part of the plotting includes the possibility to make a PyMOL script which will 
     - Values used to plot in `results/plot_values/`.
 - PyMol scripts in `results/pymol`.
 
-### NOTE
-This repo is currently being set up and is not complete.
-
-### Stuff of importance
-Following plot command:
+### For article
+Following plot command was used in the article:
 `code/capyflex_epiplot.py -n FMO -p RBD -py -f rbd -r -110 -s RBD355R -hi heavy light`
