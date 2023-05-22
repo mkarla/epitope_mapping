@@ -23,12 +23,8 @@ from time import sleep
 from tqdm import tqdm
 np.seterr(all="ignore")
 
-"""
-- dela upp för snakemake
-- generalisera adaptive ellipse?
-"""
-
 def argument_check(args):
+    #This function checks if the correct input has been given
     if not args.Input:
         print('No input path given, use -i to define input path')
         sys.exit(1)
@@ -37,6 +33,7 @@ def argument_check(args):
         sys.exit(1)
 
 def make_defaults(args, files, input_path, analyte):
+    #This function takes data required for the defaults file and creates it for future use
     print('')
     savename = input_path + analyte + '/' + 'defaults.toml'
     toml = tomlkit.document()
@@ -80,6 +77,7 @@ def make_defaults(args, files, input_path, analyte):
     return(center, channel1, channel2, high_gate, adapt_ellipse, channels)
 
 def parameters(args, input_path, analyte, files):
+    #This function searches for a defaults file and if none available asks for required parameters and creats a defaults file
     if input_path[-1] == '/':
         input_path = input_path
     else:
@@ -100,7 +98,7 @@ def parameters(args, input_path, analyte, files):
         high_gate = defaults['high_gate']
         adapt_ellipse = defaults['adapt_ellipse']
     else:
-        print('No defaults file found, manual input needed. Your input will be saved to a default file.')
+        print('No defaults file found, manual input needed. Your input will be saved to a defaults file.')
         print('To overwrite the default file in the future, use the -d command')
         center, channel1, channel2, high_gate, adapt_ellipse, channels = make_defaults(args, files, input_path, analyte)
     if args.Channel1:
@@ -120,6 +118,7 @@ def parameters(args, input_path, analyte, files):
     return(center, channel1, channel2, high_gate, adapt_ellipse)
 
 def make_filelist(input_dir, analyte):
+    #This function makes a list of all files in to analtze
     if input_dir[-1] == '/':
         input_dir = input_dir
     else:
@@ -136,6 +135,7 @@ def make_filelist(input_dir, analyte):
     return(files)
 
 def make_output(analyte):
+    #This function checks for and otherwise makes output directories for the different results
     output_path = 'results/'
     fc_plot_path = output_path + 'fc_plots/' + analyte + '/'
     if not os.path.exists(fc_plot_path):
@@ -149,6 +149,7 @@ def make_output(analyte):
     return(fc_plot_path, sup_fc_plot_path, results_path)
 
 def results_format(channel1, channel2):
+    #This function formats the results dataframe to be saved at the end of the script
     results = {
         "file": [],
         "gated events": [],
@@ -161,6 +162,8 @@ def results_format(channel1, channel2):
     return(results)
 
 def center_find(filelist, output_path):
+    #This function calculates the meanSSC and meanFSC as a suggestion for a center of the population of interest.
+    #The user gets an image of the how the gate will be applied and asked if the suggested center is okay or otherwise the user may choose their own paramaters
     print('Centertest being performed on:', filelist[0])
     s, s_g1, events, gates = read_enhance_fcs(filelist[0])
     df = pd.DataFrame(data=s_g1, columns=s.channels)
@@ -244,6 +247,7 @@ def func(df, plot=False, plot_start=-1):
     return(popt, r2)
 
 def read_enhance_fcs(filename):
+    #This function reads and FCS file and performs the recommended "enhancements" of the data
     s_raw = FlowCal.io.FCSData(filename)
     s = FlowCal.transform.to_rfi(s_raw)
     s_e = FlowCal.gate.high_low(s, channels=['SSC-A', 'FSC-A'])
@@ -252,6 +256,7 @@ def read_enhance_fcs(filename):
     return(s, s_e, events, gates)
 
 def gate_density(s, channels, gate_fraction, events, gates, plot=False, plot_mode='scatter', xscale='logicle', yscale='logicle'):
+    #This function implements an extended version of flowcals density gate which can also plot
     gate_number=len(gates)
     gate_name="Density gate ("+str(gate_number)+")"
     gates.append(gate_name)
@@ -269,6 +274,7 @@ def gate_density(s, channels, gate_fraction, events, gates, plot=False, plot_mod
     return(s_g, events, gates)
 
 def gate_elipse(s, channels, center, a, b, t, events, gates, plot=False, plot_original=False, plot_mode='scatter', xscale='logicle', yscale='logicle', contour=False, log=False):
+    #This function implements an extended version of flowcals elipse gate which can also plot
     gate_number=len(gates)
     gate_name="Eliptical gate ("+str(gate_number)+")"
     gates.append(gate_name)    
@@ -299,6 +305,7 @@ def gate_elipse(s, channels, center, a, b, t, events, gates, plot=False, plot_or
     return(s_g, events, gates)
 
 def gate_low(s, gate_channel, low, events, gates, plot=False, plot_original=False, channels=0, plot_mode='scatter', xscale='logicle', yscale='logicle', contour=False):
+    #This function implements an extended version of flowcals low/high gate which can also plot
     gate_number=len(gates)
     gate_name="Linear gate ("+str(gate_number)+")"
     gates.append(gate_name)     
@@ -323,6 +330,7 @@ def gate_low(s, gate_channel, low, events, gates, plot=False, plot_original=Fals
     return(s_g, events, gates) 
 
 def gate_high(s, gate_channel, high, events, gates, plot=False, plot_original=False, channels=0, plot_mode='scatter', xscale='logicle', yscale='logicle', contour=False):
+    #This function implements an extended version of flowcals low/high gate which can also plot
     gate_number=len(gates)
     gate_name="Linear gate ("+str(gate_number)+")"
     gates.append(gate_name)     
@@ -347,6 +355,7 @@ def gate_high(s, gate_channel, high, events, gates, plot=False, plot_original=Fa
     return(s_g, events, gates)
 
 def adaptive_ellipse(s, channel1, channel2):
+    #This function attempts to identify the lower of two populations in case of double populations and returns the centre and angle of the lower population for gating
     df_s = pd.DataFrame(data=s, columns=s.channels)
     low_gate = df_s[channel1].mean()*1.2
     
@@ -379,6 +388,7 @@ def adaptive_ellipse(s, channel1, channel2):
     return(center, angle)
 
 def plot_only(s, channels, plot_mode='scatter', xscale='logicle', yscale='logicle'):
+    #This function implements an extended version of flowcals plotting
     FlowCal.plot.density2d(s,
                           channels=channels,
                           mode=plot_mode,
@@ -386,6 +396,7 @@ def plot_only(s, channels, plot_mode='scatter', xscale='logicle', yscale='logicl
                           yscale=yscale) 
 
 def table(events, gates, fontsize=14):
+    #This function writes a table of of related data for each flow cytometry plot
     plt.axis("off")
     columns = ("Events", "Percent gated", "From previous")
     rows = gates
@@ -403,6 +414,7 @@ def table(events, gates, fontsize=14):
               )
 
 def count_means(df, results, channel1, channel2, name):
+    #This function counts and appends mean values and divisions for two FC channels
     ch1mean = df[channel1].mean()
     ch2mean = df[channel2].mean()
     
@@ -422,6 +434,7 @@ def count_means(df, results, channel1, channel2, name):
     return(results) 
 
 def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellipse, fc_plot_path, sup_path):
+    #This function makes the core plots for each sample.
     high_gate=float(high_gate)
     fig, ((ax1, ax2), (tb1, tb2), (ax3, ax4), (tb3, tb4)) = plt.subplots(4,2, figsize=(12,18), gridspec_kw={'height_ratios': [4, 1, 4, 1]})
     plt.style.use("default")
@@ -503,11 +516,12 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
     fc_savename = fc_plot_path + file.split(".")[0].split('/')[-1] + ".png"
     fig.savefig(fc_savename, dpi=300)  
     plt.close(fig)
-    
+
+    #Making supplementary
     sup_savename = sup_path + file.split(".")[0].split('/')[-1] + ".png"
-    sup_fig = plt.figure(figsize=(8, 4))
+    sup_fig = plt.figure(figsize=(5, 2.5))
     sup_fig.suptitle(filename, fontsize=12)
-    ax1 = plt.subplot2grid((13,20),(0, 0), rowspan=9, colspan=8)
+    ax1 = plt.subplot2grid((11,8),(0, 0), rowspan=5, colspan=3)
     s_p1, m_p1, contour_p1 = FlowCal.gate.ellipse(s_g1,
                                                   ["SSC-A", "FSC-A"],
                                                   log=True,
@@ -521,11 +535,15 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
                            mode='scatter',
                            xscale='logicle',
                            yscale='logicle')
+    plt.xticks(size=6)
+    plt.yticks(size=6)
     for i in contour_p1:
         plt.plot(i[:,0], i[:,1], color='k', linewidth=1.25) 
-    ax2 = plt.subplot2grid((13,20),(0, 11), rowspan=9, colspan=8)
+    ax2 = plt.subplot2grid((11,8),(0, 5), rowspan=5, colspan=3)
     plot_only(s_g4,
               channels=['FL1-A', 'FL3-A'])
+    plt.xticks(size=6)
+    plt.yticks(size=6)
     plt.axvline(high_gate, color="k", linewidth=1.25)
     if adapt_ellipse:
         s_p2, m_p2, contour_p2 = FlowCal.gate.ellipse(s_g1,
@@ -538,14 +556,14 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
                                                       full_output=True)
         for i in contour_p2:
             plt.plot(i[:,0], i[:,1], color='k', linewidth=1.25) 
-    ax3 = plt.subplot2grid((13,20),(11,6), rowspan=9, colspan=8)
-    table(events, gates, fontsize=20)    
+    ax3 = plt.subplot2grid((11,8),(8,2), rowspan=9, colspan=9)
+    table(events, gates, fontsize=18)    
     sup_fig.savefig(sup_savename, dpi=150)
-    
     plt.close(sup_fig)
     return(results)
 
 def analysis_iterator(input_dir, analyte, files, center, channel1, channel2, high_gate, adapt_ellipse):
+    #This function itereates over each file for the current analyte to calculate required values and make plots.
     fc_plot_path, sup_path, results_path = make_output(analyte)
     results = results_format(channel1, channel2)
     pbar = tqdm(range(len(files)))
@@ -590,7 +608,7 @@ def main(args):
 if __name__ == '__main__':
     prog = "Epitope mapping initial analysis program"
     description = """Version 0.2, author Maximilian Karlander \n
-    This script is designed for the initial analysis of FCS-files from the CytoFlex instrument for epitopemapping
+    This script is designed for the initial analysis of FCS-files from the CytoFlex instrument for epitope mapping
     """
     epilog = "I did good, didn't I?"
     parser = argparse.ArgumentParser(prog=prog, 
