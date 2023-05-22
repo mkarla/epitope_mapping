@@ -23,6 +23,7 @@ import numpy as np
 np.seterr(all="ignore")
 
 def make_filelist(input_dir, args):
+    #This function makes a list of all sample summaries to include
     if input_dir[-1] == '/':
         input_dir = input_dir
     else:
@@ -44,6 +45,7 @@ def make_filelist(input_dir, args):
     return(files, tops)
 
 def pymol_check(args):
+    #This function checks if pymol script should be written and if the correct parameters have been given
     if args.Pymol:
         print('Also making PyMol scripts for each analyte')
         if not args.Framework:
@@ -59,6 +61,7 @@ def path_check(path):
         os.makedirs(path)
 
 def make_output():
+    #This function makes output directories
     output_path = 'results/'
     epitope_plot_path = output_path + 'epitope_plots/'
     path_check(epitope_plot_path)
@@ -69,12 +72,14 @@ def make_output():
     return(epitope_plot_path, pymol_path, plot_value_path)
 
 def NormalizeData(current, positive, negative):
+    #This function normalizes the data
     binding_control = current.loc[current["file"] == positive]["value"].mean()
     no_binding_control = current.loc[current["file"] == negative]["value"].mean()
     nomalized_data = [(x-no_binding_control)/(binding_control-no_binding_control)*100 for x in current["value"]]
     return(nomalized_data)
 
 def data_collector(file, plot_parameter, positive, negative):
+    #This function reads the data of a summary, reformats it, and normalize it
     df = pd.read_csv(file)
     df = pd.melt(df, id_vars=['file'], value_vars=df.columns[3:].values.tolist())
     df["file"] = [x.split("_")[0] for x in df["file"]]
@@ -83,12 +88,14 @@ def data_collector(file, plot_parameter, positive, negative):
     return(df)
 
 def remove_replicates(df, positive):
+    #This function replaces replicates with the mean values and provides the std
     std_pos = df.loc[df["file"] == positive]["normalized"].values.tolist()
     std_pos = statistics.stdev(std_pos)
     df = df.groupby(['file']).mean('value', 'normalized')
     return(df, std_pos)
 
 def order(df, order_param):
+    #This function order plot data based on how the user want to order it, either by file name or value
     if order_param == 'file':
         df = df.sort_values(by='file')
         plot_order = df.index.unique().tolist()
@@ -98,6 +105,7 @@ def order(df, order_param):
     return(plot_order)
 
 def plot_colors(df, value, vmin, vmax, structural):
+    #This function assigns a color to each value for plotting based on the value
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)    
     rgba_colors = []
     positions = df.index.unique().tolist()
@@ -115,6 +123,7 @@ def plot_colors(df, value, vmin, vmax, structural):
     return(df, rgba_colors)
 
 def log_plot(df, plot_paramater, analyte, positive, order_param, barplot_path):
+    #This function makes a bar plot of all values for an analyte
     df, std_pos = remove_replicates(df, positive)
     df["log change"]=np.log10(df["normalized"])
     plot_order = order(df, order_param)
@@ -132,6 +141,7 @@ def log_plot(df, plot_paramater, analyte, positive, order_param, barplot_path):
     return(df)
 
 def heatmap_transform(df, analyte):
+    #This function transform the data for each analyte for making the heatmap
     df = df[['log change']]
     df.columns = [analyte]
     df.index.names = ['Position']
@@ -141,6 +151,7 @@ def heatmap_transform(df, analyte):
     return(df2)
 
 def position_extractor(position):
+    #This function extracts the mutated position from the filename
     pos = ''
     for i in position:
         try: 
@@ -152,6 +163,7 @@ def position_extractor(position):
     return(pos)
 
 def custom_files(custom, files):
+    #This function handles custom input of what analytes to be analyzed and how many top residues to show in pymol scripts
     column = 0
     custom_list = []
     for i in custom:
@@ -271,6 +283,7 @@ def pymol_scripter(analyte, path, df, neg, struct, rotation, framework, hide, to
             f.write(l + "\n")
 
 def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_value_path, args, tops):
+    #This function itereates over each analyte summary and collects processed data
     positive = args.Positive
     negative = args.Negative
     order_param = 'file'
@@ -305,17 +318,25 @@ def analysis_iterator(files, plot_parameter, barplot_path, pymol_path, plot_valu
     return(df_heatmap)
 
 def plot_heatmap(df, heatmap_path):
-    #target = heatmap_path.split('/')[-4]
+    #This function plots the heatmap
+    height = 2.5 + len(df)/2
+    name = list(df.index.unique())
+    name = ('_').join(name)
     cmap = sns.cm.crest_r
-    cmap = 'Greens_r'
-    fig, ax = plt.subplots(1,1, figsize=(20,5))
-    ax = sns.heatmap(df, cmap=cmap, linewidth=.5, vmin=0.8, vmax=2.8)
+    cmap = cm.coolwarm_r
+    fig, ax = plt.subplots(1,1, figsize=(30,height))
+    ax = sns.heatmap(df, cmap=cmap, linewidth=.5, vmin=0.8, vmax=3.2)
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=20)
+    ax.tick_params(axis='x', labelsize=18)
+    ax.tick_params(axis='y', rotation=0, labelsize=24)
+    plt.xlabel('Position', size=24)
     plt.tight_layout()
-    plt.savefig(heatmap_path + 'epitope_heatmap.pdf', dpi=300)       
+    plt.savefig(f'{heatmap_path}epitope_heatmap_{name}.pdf', dpi=300)       
 
 def main(args):
     input_dir = args.Input
-    print(f'\nInput directory: {input_dir}')
+    print(f'\nInput directory: {input_dir}') 
     files, tops = make_filelist(input_dir, args)
     plot_parameter = 'gated mean FL3-A div mean FL1-A one-by-one'
     epitope_plot_path, pymol_path, plot_value_path = make_output()
