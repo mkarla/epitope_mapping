@@ -535,13 +535,17 @@ def plot_files(file, results, center, channel1, channel2, high_gate, adapt_ellip
                            mode='scatter',
                            xscale='logicle',
                            yscale='logicle')
+    plt.xlabel('Side scatter', fontsize=7)
+    plt.ylabel('Forward scatter', fontsize=7)
     plt.xticks(size=6)
     plt.yticks(size=6)
     for i in contour_p1:
         plt.plot(i[:,0], i[:,1], color='k', linewidth=1.25) 
     ax2 = plt.subplot2grid((11,8),(0, 5), rowspan=5, colspan=3)
     plot_only(s_g4,
-              channels=['FL1-A', 'FL3-A'])
+              channels=[channel1, channel2])
+    plt.xlabel('Expression-Alexa 488', fontsize=7)
+    plt.ylabel('Binding-Alexa 647', fontsize=7)
     plt.xticks(size=6)
     plt.yticks(size=6)
     plt.axvline(high_gate, color="k", linewidth=1.25)
